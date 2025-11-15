@@ -1,6 +1,6 @@
 import { Router } from "express";
 import userModel from "../models/userModel.js";
-import { createHash, isValidPassword } from "../utils.js";
+import { createHash, isValidPassword} from "../utils.js";
 import jwt from "jsonwebtoken";
 import passport from "passport";
 
@@ -29,6 +29,8 @@ router.post("/register", async (req, res) => {
             age,
             email,
             password: hashedPassword,
+            role: "user",
+            cart: null,
         });
         res.send({ status: "success", payload: user });
     } catch (error) {
@@ -65,6 +67,7 @@ router.get(
     "/current",
     passport.authenticate("jwt", { session: false }),
     (req, res) => {
+        console.log("👉 Entrando a GET /api/sessions/current");
         res.send({ status: "success", payload: req.user });
     }
 );
