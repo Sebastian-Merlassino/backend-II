@@ -2,13 +2,13 @@ import mongoose from "mongoose";
 
 const userCollection = "users";
 
-const userSchema = mongoose.Schema({
-  name: {
+const userSchema = new mongoose.Schema({
+  first_name: {
     type: String,
     required: true
   },
-  age: {
-    type: Number,
+  last_name: {
+    type: String,
     required: true
   },
   email: {
@@ -16,12 +16,23 @@ const userSchema = mongoose.Schema({
     unique: true,
     required: true
   },
+  age: {
+    type: Number,
+    required: true
+  },
   password: {
     type: String,
     required: true
+  },
+  cart: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "carts",
+    default: null
+  },
+  role: {
+    type: String,
+    default: "user"
   }
 });
 
-const UserModel = mongoose.model(userCollection, userSchema);
-
-export default UserModel;
+export default mongoose.model(userCollection, userSchema);
