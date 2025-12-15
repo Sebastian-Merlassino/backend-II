@@ -1,8 +1,9 @@
 import { Router } from "express";
 import userModel from "../models/userModel.js";
-import { createHash, isValidPassword} from "../utils.js";
+import { createHash, isValidPassword } from "../utils.js";
 import jwt from "jsonwebtoken";
 import passport from "passport";
+import CurrentUserDTO from "../dtos/currentUser.dto.js";
 
 const router = Router();
 const SECRET = process.env.JWT_SECRET || "secretJWT";
@@ -62,13 +63,13 @@ router.post("/login", async (req, res) => {
     }
 });
 
-// Ruta protegida para obtener el usuario actual
+// Obtener el usuario actual
 router.get(
     "/current",
     passport.authenticate("jwt", { session: false }),
     (req, res) => {
-        console.log("👉 Entrando a GET /api/sessions/current");
-        res.send({ status: "success", payload: req.user });
+        const dto = new CurrentUserDTO(req.user);
+        res.send({ status: "success", payload: dto });
     }
 );
 
