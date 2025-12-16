@@ -1,147 +1,221 @@
-# E‑commerce backend – Entrega 1: CRUD de usuarios y autenticación JWT
+# Proyecto Backend II - Entrega Final
 
 
-## 📦 Requisitos
+Este repositorio implementa un **backend de ecommerce** usando **Node.js**, **Express** y **MongoDB**.  
+La entrega final refactoriza la arquitectura e incorpora un sistema completo de usuarios, productos, carritos, tickets y recuperación de contraseña.  
 
-- **Node.js** versión ≥ 18
-- **MongoDB** (Atlas o local)
-- Variables de entorno (archivo `.env` en la raíz):
-  - `MONGO_URI`: cadena de conexión a MongoDB (por ejemplo, `mongodb+srv://<user>:<pass>@cluster.mongodb.net` o `mongodb://localhost:27017/ecommerce`).
-  - `MONGO_DB`: nombre de la base de datos (por defecto `ecommerce`).
-  - `JWT_SECRET`: clave secreta utilizada para firmar los tokens (puedes establecer, por ejemplo, `secretJWT`).
-  - `PORT` (opcional): puerto en el que se ejecutará el servidor (por defecto `8080`).
+## Estructura general
 
-## 🔧 Instalación
+- `src/models/` – Modelos de Mongoose (`userModel`, `productModel`, `cartModel`, `ticketModel`).  
+- `src/dao/` – Clases DAO (Data Access Object) que encapsulan el acceso a la base de datos.  
+- `src/repositories/` – Repositorios que utilizan los DAOs para separar la lógica de datos de la lógica de negocio.  
+- `src/dtos/` – Data Transfer Objects para filtrar información sensible (por ejemplo, `currentUser.dto.js`).  
+- `src/config/` – Configuraciones de Passport JWT y Nodemailer.  
+- `src/middlewares/` – Middleware de autorización por roles.  
+- `src/routes/` – Rutas agrupadas por recursos: usuarios (`userRouter`), sesiones (`sessionRouter`), productos (`productsRouter`), carritos (`cartsRouter`) y recuperación de contraseña (`passwordRouter`).
+- `src/app.js` – Configuración principal del servidor Express.
 
-1. **Clonar el repositorio**
+## Variables de entorno (`.env`)
 
+Cree un archivo `.env` en la raíz con las siguientes variables:
+
+```
+PORT=8080
+MONGO_URI=mongodb+srv://<usuario>:<contraseña>@<cluster>/<dbname>?retryWrites=true&w=majority
+MONGO_DB=ecommerce
+JWT_SECRET=superSecretJWT
+RESET_SECRET=superSecretReset
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USER=tu_correo@gmail.com
+MAIL_PASS=tu_app_password
+MAIL_FROM="Ecommerce Backend <tu_correo@gmail.com>"
+APP_URL=http://localhost:8080
+```
+
+**Importante**: reemplace las credenciales según su configuración.  
+
+## Instalación y ejecución
+
+1. Clone el repositorio y entre al directorio:
    ```bash
    git clone https://github.com/Sebastian-Merlassino/backend-II.git
    cd backend-II
    ```
-
-2. **Instalar dependencias**
-
+2. Instale las dependencias:
    ```bash
    npm install
    ```
-
-3. **Configurar las variables de entorno**
-
-   Crea un archivo `.env` en la raíz del proyecto y completa al menos las siguientes variables:
-
-   ```env
-   MONGO_URI=mongodb://localhost:27017
-   MONGO_DB=ecommerce
-   JWT_SECRET=secretJWT
-   PORT=8080
-   ```
-
-   Ajusta la URI según tu instalación de MongoDB.
-
-## ▶️ Ejecución
-
-Inicia el servidor con el comando:
-
-```bash
-npm start
-```
-
-En la consola se mostrará `✅ Conectado a MongoDB` si la conexión fue exitosa y luego `Start Server in Port 8080` (o el puerto configurado).
-
-## 📚 Estructura del proyecto
-
-- `src/app.js`: configuración principal de Express, conexión a MongoDB y registro de rutas.
-- `src/models/userModel.js`: esquema de Mongoose para los usuarios, con los campos solicitados:
-  - `first_name` (String)
-  - `last_name` (String)
-  - `email` (String, único)
-  - `age` (Number)
-  - `password` (String en formato hash)
-  - `cart` (Id que referencia a la colección `carts`)
-  - `role` (String, por defecto `'user'`)
-- `src/models/cartModel.js`: esquema básico de carrito.
-- `src/utils.js`: utilidades para hashear y validar contraseñas mediante **bcrypt**.
-- `src/config/passport.config.js`: configuración de **Passport** con estrategia **JWT**.
-- `src/routes/userRouter.js`: CRUD completo de usuarios.
-- `src/routes/sessionRouter.js`: manejo de registro, login y ruta `/current` para devolver el usuario autenticado.
-
-## 🚀 Endpoints disponibles
-
-### Usuarios
-
-Los endpoints de `/api/users` permiten realizar un CRUD sobre la colección de usuarios:
-
-- **`GET /api/users`** – devuelve la lista completa de usuarios.
-- **`POST /api/users`** – crea un usuario nuevo.  Campos requeridos: `first_name`, `last_name`, `age`, `email`, `password`.  Opcionalmente puede enviarse `role` y `cart`; en su ausencia se asignan los valores por defecto.  La contraseña se almacena en formato hash.
-- **`PUT /api/users/:uid`** – actualiza los datos de un usuario identificado por `uid`.  Permite modificar `first_name`, `last_name`, `age`, `email`, `password` y `role`.  Si se envía un nuevo `password`, se vuelve a hashear.
-- **`DELETE /api/users/:uid`** – elimina un usuario.
-
-### Sesiones y autenticación
-
-Los endpoints de `/api/sessions` gestionan el registro y la autenticación de usuarios mediante JWT:
-
-- **`POST /api/sessions/register`** – registra un nuevo usuario.  Requiere `first_name`, `last_name`, `age`, `email` y `password`.  Los campos `role` y `cart` se asignan por defecto (rol `'user'` y carrito `null`).  La contraseña se hashea usando **bcrypt**.
-- **`POST /api/sessions/login`** – inicia sesión.  Recibe `email` y `password`.  Si las credenciales son válidas:
-  - Se genera un **JSON Web Token** con el id y el rol del usuario.
-  - Se devuelve el token en la respuesta y también se guarda en una cookie HTTP‑Only llamada `token`.
-- **`GET /api/sessions/current`** – devuelve los datos del usuario logueado.  Esta ruta está protegida por la estrategia JWT de Passport; requiere que el token sea válido.  Si el token no existe o es inválido, Passport responde con error 401.
-
-## 🧪 Cómo probar la API
-
-A continuación se describe un flujo de prueba típico usando [Postman](https://www.postman.com/) o `curl`.  Supongamos que el servidor corre en `http://localhost:8080`.
-
-1. **Registrar un usuario**
-
+3. Cree el archivo `.env` y configure sus variables.
+4. Levante el servidor en desarrollo:
    ```bash
-   curl -X POST http://localhost:8080/api/sessions/register \
-        -H "Content-Type: application/json" \
-        -d '{
-             "first_name": "Sebastián",
-             "last_name": "Merlassino",
-             "age": 30,
-             "email": "user@example.com",
-             "password": "1234"
-           }'
+   npm start
    ```
+   Verá en consola `✅ Conectado a MongoDB` y `Start Server in Port 8080`.
 
-   La respuesta indicará `status: success` y devolverá los datos del nuevo usuario.
+## Endpoints principales
 
-2. **Iniciar sesión**
+Las rutas se montan bajo `/api`. Se autenticará a los usuarios con JWT y se autorizará según el rol (`user` o `admin`).
 
+### Autenticación y usuario actual
+
+- **POST /api/sessions/register** – Registra un usuario (por defecto con rol `user`).
+- **POST /api/sessions/login** – Inicia sesión; devuelve un `token` JWT y lo guarda en cookie.
+- **GET /api/sessions/current** – Devuelve la información del usuario autenticado en formato DTO (sin contraseña).
+
+### Recuperación de contraseña
+
+- **POST /api/password/forgot** – Envía un correo al usuario con un enlace para restablecer la contraseña. El enlace caduca en 1 hora.
+- **POST /api/password/reset** – Cambia la contraseña. Recibe `token` y `password` en el body.  
+  El token se valida y se impide usar la misma contraseña que la actual.
+
+### Usuarios (CRUD)
+
+- **GET /api/users** – Lista todos los usuarios.  
+- **POST /api/users** – Crea un usuario (contraseña hasheada con bcrypt).  
+- **PUT /api/users/:uid** – Actualiza un usuario.  
+- **DELETE /api/users/:uid** – Elimina un usuario.
+
+### Productos
+
+- **GET /api/products** – Lista todos los productos.  
+- **GET /api/products/:pid** – Obtiene un producto por ID.
+- **POST /api/products** – Crea un producto (**solo rol admin**).
+- **PUT /api/products/:pid** – Actualiza un producto (**solo rol admin**).
+- **DELETE /api/products/:pid** – Elimina un producto (**solo rol admin**).
+
+### Carritos y compras
+
+- **POST /api/carts** – Crea un carrito.
+- **POST /api/carts/:cid/product/:pid** – Agrega un producto al carrito (**rol user**).  `body` acepta `quantity` (opcional, default 1).
+- **POST /api/carts/:cid/purchase** – Realiza la compra del carrito (**rol user**).  
+  Verifica stock de cada producto, descuenta stock, genera un ticket y devuelve productos agotados.
+
+### Tickets
+
+Los tickets se generan automáticamente durante la compra y se almacenan en la colección `tickets`.
+
+## Cómo probar la aplicación
+
+### 1. Registrar y loguear usuarios
+
+1. **Registrar un usuario:**
    ```bash
-   curl -X POST http://localhost:8080/api/sessions/login \
-        -H "Content-Type: application/json" \
-        -d '{
-             "email": "user@example.com",
-             "password": "1234"
-           }'
+   POST /api/sessions/register
+   Content-Type: application/json
+
+   {
+     "first_name": "Ana",
+     "last_name": "Gómez",
+     "age": 30,
+     "email": "ana@example.com",
+     "password": "secreto"
+   }
    ```
-
-   La respuesta contiene un objeto `payload` con el token.  Además, la cookie `token` se establecerá en la respuesta.  Guarda este token para los siguientes pasos.
-
-3. **Obtener el usuario actual**
-
-   Utiliza el token recibido en el paso anterior (o deja que Postman reenvíe automáticamente la cookie `token`):
-
+2. **Login:**
    ```bash
-   curl http://localhost:8080/api/sessions/current \
-        -H "Authorization: Bearer <tu_token_aquí>"
+   POST /api/sessions/login
+   Content-Type: application/json
+
+   {
+     "email": "ana@example.com",
+     "password": "secreto"
+   }
    ```
+   El servidor devolverá `{ token: <jwt> }` y además guardará la cookie `token` en la respuesta.  
+   Puede usar ese JWT para autenticar llamadas protegidas (por cookie o header `Authorization: Bearer <token>`).
+3. **Ver usuario actual:**
+   ```bash
+   GET /api/sessions/current
+   Cookie: token=<jwt>
+   ```
+   Devuelve un JSON con los campos no sensibles (`first_name`, `last_name`, `email`, `role`, `cart`).
 
-   La respuesta mostrará el objeto `user` sin incluir la contraseña.
+### 2. Registrar un administrador
 
-4. **Probar rutas de CRUD de usuarios**
+Cree un usuario con email `adminCoder@coder.com` y asignarle rol `admin` manualmente en la base de datos o agregando `role: "admin"` al body del registro.  
+Con este usuario podrá crear, actualizar y eliminar productos.
 
-   - **Listar usuarios**: `curl http://localhost:8080/api/users`
-   - **Crear usuario** (versión CRUD): igual que en el registro, usando `POST /api/users`.
-   - **Actualizar**: `curl -X PUT http://localhost:8080/api/users/<uid> -H "Content-Type: application/json" -d '{"first_name":"NuevoNombre"}'`
-   - **Eliminar**: `curl -X DELETE http://localhost:8080/api/users/<uid>`
+### 3. Crear y gestionar productos
 
-## 📝 Notas para la corrección
+Estando logueado como **admin**:
 
-- El proyecto **no incluye** la carpeta `node_modules` en el repositorio, tal como requiere la consigna.
-- El modelo de usuario implementa todos los campos especificados y utiliza **bcrypt.hashSync** para almacenar contraseñas en formato hashhttps://github.com/Sebastian-Merlassino/backend-II/blob/main/src/models/userModel.js#L23-L34.
-- Se ha configurado **Passport** con una estrategia **JWT** que extrae el token de la cookie `token` o de la cabecera `Authorization`https://github.com/Sebastian-Merlassino/backend-II/blob/main/src/config/passport.config.js#L16-L37.  Cuando el token es válido, `req.user` contiene el usuario; de lo contrario, se devuelve un error.
-- Las rutas de sesión gestionan el **login** y devuelven un token JWT, mientras que la ruta `/api/sessions/current` valida el token y devuelve el usuario asociadohttps://github.com/Sebastian-Merlassino/backend-II/blob/main/src/routes/sessionRouter.js#L63-L70.
-- Las pruebas descritas permiten verificar la correcta operación del sistema de autenticación y del CRUD de usuarios.
+1. **Crear producto:**
+   ```bash
+   POST /api/products
+   Cookie: token=<jwt-de-admin>
+   Content-Type: application/json
+
+   {
+     "title": "Remera",
+     "description": "Remera algodon",
+     "price": 5000,
+     "stock": 10,
+     "category": "indumentaria"
+   }
+   ```
+2. **Listar productos:** `GET /api/products`
+3. **Actualizar producto:**
+   ```bash
+   PUT /api/products/<productId>
+   Cookie: token=<jwt-de-admin>
+   Content-Type: application/json
+
+   { "price": 5500, "stock": 8 }
+   ```
+4. **Eliminar producto:** `DELETE /api/products/<productId>` (solo admin)
+
+### 4. Crear carrito y comprar
+
+Estando logueado como **usuario**:
+
+1. **Crear carrito:** `POST /api/carts`
+2. **Agregar producto al carrito:**
+   ```bash
+   POST /api/carts/<cartId>/product/<productId>
+   Cookie: token=<jwt-de-user>
+   Content-Type: application/json
+
+   { "quantity": 2 }
+   ```
+3. **Realizar compra:**
+   ```bash
+   POST /api/carts/<cartId>/purchase
+   Cookie: token=<jwt-de-user>
+   ```
+   Respuesta:
+   - `ticket`: ticket generado (con código, monto y comprador).
+   - `outOfStock`: array de productos que no pudieron comprarse por falta de stock.
+
+### 5. Recuperar contraseña
+
+1. **Solicitar reset:**
+   ```bash
+   POST /api/password/forgot
+   Content-Type: application/json
+
+   { "email": "ana@example.com" }
+   ```
+   Se envía un correo al usuario con un enlace de restablecimiento que contiene un `token`.  **Para pruebas sin enviar correo real**, revise la consola donde se loguea el enlace generado.
+2. **Restablecer contraseña:**
+   ```bash
+   POST /api/password/reset
+   Content-Type: application/json
+
+   {
+     "token": "<token-del-mail>",
+     "password": "nueva_clave"
+   }
+   ```
+   La contraseña nueva no puede ser igual a la anterior y el token expira en 1 hora.
+
+## Notas
+
+- **Roles y autorización:** El middleware `authorizeRoles` se aplica en las rutas sensibles.  
+  Las rutas de productos requieren rol `admin`.  Las rutas para agregar al carrito y comprar requieren rol `user`.  Otros roles obtendrán error 403.
+- **DTO:** La ruta `/api/sessions/current` usa `CurrentUserDTO` para evitar exponer la contraseña u otros campos sensibles.
+- **Patrón Repository:** La lógica de acceso a datos se encapsula en los DAOs; los servicios y rutas usan los repositorios para realizar operaciones.
+- **Recuperación de contraseña:** Se implementa con JWT firmado y expiración de 1 hora.  No se permite reutilizar la contraseña anterior.
+- **Lógica de compra:** Verifica stock, descuenta existencias, genera ticket y reporta productos sin stock en la respuesta.
+
+---
